@@ -34,15 +34,16 @@ An enterprise-grade, IoT-enabled Battery Management System built around an ESP32
 
 ---
 
-## System Architecture & Circuit Diagram
-
-![System Circuit Diagram](circuit_diagram.png)
-
----
-
 ## System Workflow Diagram
 
 ![System Workflow Diagram](workflow_diagram.png)
+
+
+---
+
+## System Architecture & Circuit Diagram
+
+![System Circuit Diagram](circuit_diagram.png))
 
 ---
 
