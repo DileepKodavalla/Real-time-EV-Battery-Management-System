@@ -295,6 +295,8 @@ void transmitToCloud() {
   Blynk.virtualWrite(V3, wifiSignalRSSI);
   Blynk.virtualWrite(V4, currentState);
   Blynk.virtualWrite(V6, riskScore);
+  Blynk.virtualWrite(V7, strongestCellIndex + 1); // Stream Strongest Cell Number (1-4)
+  Blynk.virtualWrite(V8, weakestCellIndex + 1);   // Stream Weakest Cell Number (1-4)
 }
 
 void syncCloudEventQueue() {
@@ -474,21 +476,27 @@ void logFault(unsigned long timestamp, const char* errorCode, int cellNum) {
   Serial.println("==================================================\n\n");
   
   if (Blynk.connected()) {
-    String logMsg = "[" + String(timestamp) + "ms] " + String(errorCode);
-    if (cellNum > 0) logMsg += " (Cell " + String(cellNum) + ")";
-    Blynk.virtualWrite(V5, logMsg);
-    
-    // Stream intelligent operator directives directly into the V5 terminal window
+    String conditionLine = "";
+    String directiveLine = "";
+
     String codeStr = String(errorCode);
     if (codeStr == "ERR_CRITICAL_IMBALANCE") {
-      Blynk.virtualWrite(V5, "-> DIRECTIVE: Inspect balancing bleed resistors & check cell drift.");
+      conditionLine = "[WARNING: CRIT IMBALANCE] Imbalance >= 5.0%";
+      directiveLine = "-> DIRECTIVE: Inspect balancing bleed resistors & check cell drift.";
     } else if (codeStr == "ERR_SENSOR_DISCONNECT") {
-      Blynk.virtualWrite(V5, "-> DIRECTIVE: Verify analog pin wiring harness & cell terminals.");
+      conditionLine = "[SHUTDOWN: SENSOR FAULT] Open circuit on Cell " + String(cellNum);
+      directiveLine = "-> DIRECTIVE: Verify analog pin wiring harness & cell terminals.";
     } else if (codeStr == "ERR_ADC_FROZEN") {
-      Blynk.virtualWrite(V5, "-> DIRECTIVE: Failsafe active. Verify I2C bus & sensor health.");
+      conditionLine = "[FAILSAFE: ADC FROZEN] Static readings > 15s";
+      directiveLine = "-> DIRECTIVE: Verify I2C bus & sensor health.";
     } else if (codeStr == "ERR_PACK_FAILURE") {
-      Blynk.virtualWrite(V5, "-> DIRECTIVE: Emergency shutdown active. Check cell voltage safety bounds.");
+      conditionLine = "[CRITICAL: PACK FAILURE] Cell voltage out of bounds";
+      directiveLine = "-> DIRECTIVE: Emergency shutdown active. Check cell voltage bounds.";
     }
+
+    // Stack Condition on Line 1 and Directive on Line 2 with a clean newline
+    String terminalPayload = conditionLine + "\n" + directiveLine + "\n-----------------------------------";
+    Blynk.virtualWrite(V5, terminalPayload);
   }
 }
 
@@ -500,6 +508,8 @@ void sendTelemetry() {
   Serial.print("C4:"); Serial.print(cellVoltages[3], 2); Serial.print("V | ");
   Serial.print("Avg:"); Serial.print(avgVoltage, 2); Serial.print("V | ");
   Serial.print("Imb:"); Serial.print(imbalancePercent, 1); Serial.print("% | ");
+  Serial.print("Strongest: C"); Serial.print(strongestCellIndex + 1); Serial.print(" | ");
+  Serial.print("Weakest: C"); Serial.print(weakestCellIndex + 1); Serial.print(" | ");
   Serial.print("Risk:"); Serial.print(riskScore); Serial.print(" | ");
   
   Serial.print("Mode:");
